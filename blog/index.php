@@ -1,21 +1,44 @@
 <?php
+session_start();
+
 $conn = mysqli_connect("localhost","root","","blog");
 
-// Pagination
-$limit = 5;
-$page = isset($_GET['page']) ? $_GET['page'] : 1;
-$start = ($page - 1) * $limit;
-
-// Search
-$search = "";
-if(isset($_GET['search'])){
-    $search = $_GET['search'];
-    $sql = "SELECT * FROM posts WHERE title LIKE '%$search%' OR content LIKE '%$search%' LIMIT $start,$limit";
-}else{
-    $sql = "SELECT * FROM posts LIMIT $start,$limit";
+if(!$conn){
+    die("Database connection failed");
 }
 
-$result = mysqli_query($conn,$sql);
+/* CSRF TOKEN */
+if(!isset($_SESSION['csrf_token'])){
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+/* Pagination */
+$limit = 5;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$start = ($page - 1) * $limit;
+
+/* Search */
+$search = isset($_GET['search']) ? trim($_GET['search']) : "";
+
+if($search != ""){
+
+    $searchTerm = "%".$search."%";
+
+    $stmt = $conn->prepare("SELECT * FROM posts WHERE title LIKE ? OR content LIKE ? LIMIT ?,?");
+    $stmt->bind_param("ssii",$searchTerm,$searchTerm,$start,$limit);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+
+}else{
+
+    $stmt = $conn->prepare("SELECT * FROM posts LIMIT ?,?");
+    $stmt->bind_param("ii",$start,$limit);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+
+}
 ?>
 
 <!DOCTYPE html>
@@ -34,11 +57,19 @@ $result = mysqli_query($conn,$sql);
 
 <h2 class="mb-4">My Blog Posts</h2>
 
-<!-- Search Form -->
+<!-- SEARCH FORM -->
 
 <form method="GET" class="mb-4">
 
-<input type="text" name="search" class="form-control" placeholder="Search post..." value="<?php echo $search; ?>">
+<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
+<input 
+type="text"
+name="search"
+class="form-control"
+placeholder="Search post..."
+value="<?php echo htmlspecialchars($search); ?>"
+>
 
 <br>
 
@@ -46,46 +77,51 @@ $result = mysqli_query($conn,$sql);
 
 </form>
 
-<!-- Display Posts -->
+<!-- POSTS -->
 
-<?php
-while($row = mysqli_fetch_assoc($result)){
-?>
+<?php while($row = $result->fetch_assoc()){ ?>
 
 <div class="card mb-3">
+
 <div class="card-body">
 
-<h4><?php echo $row['title']; ?></h4>
+<h4>
+<?php echo htmlspecialchars($row['title']); ?>
+</h4>
 
-<p><?php echo $row['content']; ?></p>
+<p>
+<?php echo htmlspecialchars($row['content']); ?>
+</p>
 
 </div>
+
 </div>
 
-<?php
-}
-?>
+<?php } ?>
 
-<!-- Pagination -->
+<!-- PAGINATION -->
 
 <?php
 
-$sql_total = "SELECT COUNT(id) AS total FROM posts";
-$result_total = mysqli_query($conn,$sql_total);
-$row_total = mysqli_fetch_assoc($result_total);
+$totalQuery = "SELECT COUNT(id) AS total FROM posts";
+$totalResult = mysqli_query($conn,$totalQuery);
+$totalRow = mysqli_fetch_assoc($totalResult);
 
-$total_pages = ceil($row_total['total'] / $limit);
+$total_pages = ceil($totalRow['total'] / $limit);
 
-for($i=1; $i<=$total_pages; $i++){
 ?>
 
-<a class="btn btn-secondary m-1" href="?page=<?php echo $i; ?>&search=<?php echo $search; ?>">
+<div class="mt-4">
+
+<?php for($i=1;$i<=$total_pages;$i++){ ?>
+
+<a class="btn btn-secondary m-1" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>">
 <?php echo $i; ?>
 </a>
 
-<?php
-}
-?>
+<?php } ?>
+
+</div>
 
 </div>
 
