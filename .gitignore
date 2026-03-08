@@ -1,0 +1,20 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# XAMPP / Local files
+xampp/
+tmp/
+
+# Logs
+*.log
+
+# Environment files
+.env
+
+# Node modules (if used later)
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
