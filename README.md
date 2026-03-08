@@ -48,7 +48,20 @@ The following security measures were implemented:
 ![Pagination](pagination.png)
 
 ---
-
 ## ⚙ Installation
 
 1. Clone the repository
+
+## Final Project
+
+This project integrates all features including:
+
+- User authentication (login/register)
+- CRUD operations for blog posts
+- Search functionality
+- Pagination
+- Security enhancements
+
+The application was tested for functionality, usability, and security.
+
+
